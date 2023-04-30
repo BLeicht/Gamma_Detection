@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys
+import cv2
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,22 +11,41 @@ from skimage import io, util
 def main(imagePath="./testImages/peppers.png"):
     #SetSysSettings()
     image = GrayscaleImport(imagePath)
-    histArray, bins = CalcHist(image)
-    PlotHist(histArray, bins)
+    #histArray, bins = CalcHist(image)
+    #PlotHist(histArray, bins)
 
-    arrayPeaksGaps = DetectPeaksGaps(histArray)
+    #arrayPeaksGaps = DetectPeaksGaps(histArray)
     
-    isCorrectedImage = DetectIfGamma(arrayPeaksGaps)
+    #isCorrectedImage, correctionDirection  = DetectIfGamma(arrayPeaksGaps)
+
+
+    gammadImage = AdjustGamma(image, )
+    histArray, bins = CalcHist(gammadImage)
+    arrayPeaksGaps = DetectPeaksGaps(histArray)
+    isCorrectedImage, correctionDirection = DetectIfGamma(arrayPeaksGaps)
     print(isCorrectedImage)
+    print(correctionDirection)
+
+
+# Adjusts the gamma of a given image array and returns
+# the new image array
+def AdjustGamma(imageArray, gamma=1.0):
+    invGamma = 1.0 / gamma
+    table = np.array([((i / 255.0) ** invGamma) * 255
+                      for i in np.arange(0, 256)]).astype("uint8")
+    return cv2.LUT(imageArray, table)
 
 
 # Takes a peaks and gaps array from (DetectPeaksGaps())
 # and outputs whether or not it's a gamma corrected image
+# and the direction it's corrected (as a 1 or -1 for
+# up and down gamma) as a tuple
 def DetectIfGamma(arrayPeaksGaps):
-    if (arrayPeaksGaps.min() == arrayPeaksGaps.max()):
-        return False
-
     firstSectionIs = 0
+
+    if (arrayPeaksGaps.min() == arrayPeaksGaps.max()):
+        return (False, -1*firstSectionIs)
+
     inSecondSection = False
 
     i = 0
@@ -41,7 +61,8 @@ def DetectIfGamma(arrayPeaksGaps):
                     inSecondSection = True
         i += 1
 
-    return True
+
+    return (True, -1*firstSectionIs)
 
 
 # Finds all peaks and gaps from the given histogram
